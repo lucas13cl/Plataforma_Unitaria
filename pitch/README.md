@@ -4,7 +4,11 @@ Apresentação interativa da **Plataforma Unitária Recife Solidário** (Hackath
 
 Arquivo único e **offline-first**: `index.html`. Sem CDN, sem servidor, sem instalar nada.
 
-## Abrir
+## Link para apresentar
+
+**<https://plataforma-unitaria.onrender.com/pitch/>** — servido pelo próprio backend, no mesmo domínio do app (o `render.yaml` publica a cada merge na `main`).
+
+## Abrir localmente (ou offline)
 
 ```bash
 # opção 1 — direto no navegador

@@ -130,6 +130,22 @@ describe('API — Plataforma Humanitária Recife (edital: ≥3 testes no CI)', (
     for (const ngo of json.ngos) assert.match(ngo.osmUrl, /openstreetmap\.org/);
   });
 
+  test('GET /pitch/ entrega o deck da apresentação (HTML) no mesmo domínio', async () => {
+    const res = await fetch(`${baseUrl}/pitch/`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') || '', /text\/html/);
+    const html = await res.text();
+    assert.match(html, /Recife/);
+    assert.match(html, /class="slide/);
+    assert.match(html, /openstreetmap|plataforma-unitaria\.onrender\.com/);
+  });
+
+  test('GET /pitch/qr-app.png entrega o QR Code do app', async () => {
+    const res = await fetch(`${baseUrl}/pitch/qr-app.png`);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') || '', /image\/png/);
+  });
+
   test('GET /api/indicator retorna o indicador de resultado definido no README', async () => {
     const res = await fetch(`${baseUrl}/api/indicator`);
     assert.equal(res.status, 200);
