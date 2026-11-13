@@ -1,5 +1,8 @@
 # Pitch — 3 minutos (roteiro)
 
+> **Deck interativo para projetar:** [`pitch/index.html`](../pitch/index.html) — 13 slides, cronômetro de 3:00, demo ao vivo e QR Code. Atalhos em [`pitch/README.md`](../pitch/README.md).
+> Use este arquivo como **roteiro falado**; o deck é o que a banca vê.
+
 > 20 equipes × 5 min (3 de apresentação + 2 de perguntas). Ensaie com cronômetro.
 >
 > **Aplicação no ar:** <https://plataforma-unitaria.onrender.com/> — **abra essa URL antes de começar** (o plano free hiberna e leva 30–50 s para acordar) e deixe a aba carregada.

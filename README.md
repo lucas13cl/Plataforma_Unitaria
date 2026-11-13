@@ -165,7 +165,28 @@ O CI tem o job **`smoke-producao`**, que executa exatamente os comandos do Rende
 
 Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY.md#alternativa-vercel-front--render-back).
 
-## 11. Acessibilidade e mobile (regra 6)
+## 11. Pitch — apresentação de 3 minutos
+
+Deck **HTML interativo**, arquivo único e offline-first: **[`pitch/index.html`](pitch/index.html)**.
+
+- **13 slides** com navegação por teclado, cronômetro de 3:00 (verde → amarelo → vermelho), tela cheia e modo **PDF** pelo `Ctrl/Cmd + P`
+- **Demo ao vivo** em moldura de celular (`iframe` do app publicado) com botão para abrir em nova aba e plano B por captura
+- **QR Code embutido** (SVG gerado localmente, sem serviço externo) na capa, na demo e no fechamento
+- Mesma paleta do app (navy `#0F172A`, azul `#2563EB`, ciano `#22D3EE`, verde `#10B981`)
+
+<p align="center">
+  <a href="https://plataforma-unitaria.onrender.com/">
+    <img src="pitch/qr-app.png" alt="QR Code para abrir a aplicação Recife Solidário" width="180">
+  </a><br>
+  <sub>Escaneie para abrir a aplicação no celular</sub>
+</p>
+
+Roteiro minuto a minuto, atalhos e como regerar o QR: **[`pitch/README.md`](pitch/README.md)**.
+Os dados do pitch (2022 e 2025) estão citados na seção 1 e em [`docs/DADOS.md`](docs/DADOS.md).
+
+> ⚠️ O slide 8 (validação com o Movimento Pró-Criança) está com marcador **preencher** até o registro em [`docs/VALIDACAO.md`](docs/VALIDACAO.md).
+
+## 12. Acessibilidade e mobile (regra 6)
 
 - Layout responsivo (celular primeiro), navegação por abas com `role="tablist/tab"`, `aria-selected` e setas do teclado
 - Link *Pular para o conteúdo*, `lang="pt-BR"`, `meta description`, labels associados a todos os campos (`htmlFor`/`id`)
@@ -174,7 +195,7 @@ Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY
 - Feedback dinâmico com `role="status"` + `aria-live="polite"` (cadastro de doação e resultado da IA são anunciados)
 - Foco visível em todos os controles, linguagem simples e frases curtas em todas as telas
 
-## 12. Estrutura do repositório
+## 13. Estrutura do repositório
 
 ```
 .
@@ -184,6 +205,10 @@ Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY
 ├── frontend/
 │   ├── src/App.jsx        # interface (React)
 │   └── vite.config.js     # proxy /api em dev
+├── pitch/
+│   ├── index.html         # deck interativo de 3 min (offline, 13 slides)
+│   ├── qr-app.svg/.png    # QR para o app publicado
+│   └── README.md          # atalhos, roteiro e como regerar o QR
 ├── docs/
 │   ├── DEPLOY.md          # passo a passo do deploy
 │   ├── PITCH.md           # roteiro do pitch de 3 minutos
@@ -195,7 +220,7 @@ Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY
 └── README.md              # este arquivo (modelo do edital)
 ```
 
-## 13. Conformidade regra a regra (Anexo V)
+## 14. Conformidade regra a regra (Anexo V)
 
 | # | Regra do edital | Como a solução cumpre | Onde comprovar |
 |---|---|---|---|
@@ -208,14 +233,14 @@ Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY
 | 7 | Deploy público + ≥3 testes no CI + README | Serviço único no Render, 10 testes no GitHub Actions, este README | Seção 10, badge/CI, `npm test` |
 | 8 | Escopo aprovado pelo mentor no Dia 1 | Escopo do Caminho 3 registrado e reduzido a um fluxo | Seção 2 |
 
-## 14. Checklist do code freeze (16h do Dia 2)
+## 15. Checklist do code freeze (16h do Dia 2)
 
 - [x] Solução funcionando no celular, com deploy público — <https://plataforma-unitaria.onrender.com/>
 - [ ] Repositório com README preenchido nos campos do modelo (seções 1 a 7)
 - [ ] Pelo menos 3 testes passando no CI (hoje: 10)
-- [ ] Pitch de 3 minutos com demonstração (roteiro em [docs/PITCH.md](docs/PITCH.md))
+- [x] Pitch de 3 minutos com demonstração — deck em [`pitch/index.html`](pitch/index.html) (roteiro em [docs/PITCH.md](docs/PITCH.md))
 
-## 15. Stack
+## 16. Stack
 
 React + Vite + Tailwind CSS (front) • Node.js + Express (back) • Sem banco de dados no protótipo (memória, dados fictícios identificados) • Deploy: Render • CI: GitHub Actions
 
