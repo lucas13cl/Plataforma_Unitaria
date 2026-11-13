@@ -12,8 +12,18 @@ O `render.yaml` já descreve build, start, health check e variáveis. Não é pr
 
 1. Abra **<https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria>** e entre com GitHub.
 2. Se aparecer, autorize o **Render GitHub App** no repositório `Plataforma_Unitaria` (permissão de leitura + webhooks).
-3. O Render lê o `render.yaml` da raiz e mostra o serviço `plataforma-unitaria-recife` já configurado (Node, plano free, região Ohio, health check `/api/health`).
-4. Clique em **Apply** / **Create Web Service**. O primeiro build leva 2–4 min.
+3. Preencha a tela **"You are deploying from a Blueprint for lucas13cl/Plataforma_Unitaria"**:
+
+   | Campo na tela | O que colocar |
+   |---|---|
+   | **Blueprint Name** | `plataforma-unitaria` (é obrigatório — sem ele o botão não avança) |
+   | **Branch** | `main` (já vem preenchido; é a branch onde o `render.yaml` está versionado) |
+   | **Blueprint Path** | `render.yaml` (já vem preenchido; não altere) |
+   | **Specified configurations** | deixar **Create all as new services** |
+
+   O aviso *"We found existing services that match this Blueprint…"* aparece quando já existe um serviço com o mesmo nome na workspace. Escolher **Create all as new services** cria uma instância limpa a partir do `render.yaml` (o Render acrescenta um sufixo ao nome, ex.: `plataforma-unitaria-recife-6n6q`). Se preferir reaproveitar o serviço antigo, escolha **Associate existing services** — mas ele passa a ser regido pelo `render.yaml` e será reimplantado.
+
+4. Clique em **Deploy Blueprint**. O primeiro build leva 2–4 min.
 5. Espere o status **Live** (o health check precisa responder 200).
 6. Copie a URL pública e cole no README (seção 10) e no pitch.
 
