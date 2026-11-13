@@ -125,7 +125,8 @@ Serviço **único** no Render: o mesmo processo serve a API (`/api/...`) e o app
 | Build | `npm ci && npm --prefix frontend ci && npm --prefix frontend run build` |
 | Start | `node backend/server.js` |
 | Health check | `/api/health` |
-| Região | Ohio (mais próxima com datacenter do Render) |
+| Região | Ohio |
+| Rede | `compression` (gzip) + cache imutável dos assets, `x-powered-by` desligado, bind `0.0.0.0` |
 
 ### Deploy em 4 passos (um clique + autorização)
 
