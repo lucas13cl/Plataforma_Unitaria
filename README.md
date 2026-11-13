@@ -56,15 +56,19 @@ Pensada primeiro para a população da RMR mais exposta aos eventos climáticos 
 | Apac — Agência Pernambucana de Águas e Clima | [apac.pe.gov.br](https://apac.pe.gov.br) | Contexto de chuva/rios em Pernambuco |
 | Cemaden — Centro Nacional de Monitoramento e Alertas de Desastres Naturais | [cemaden.gov.br](https://www.cemaden.gov.br) | Alertas de deslizamento/inundação |
 | Dados Abertos da Prefeitura do Recife | [dados.recife.pe.gov.br](https://dados.recife.pe.gov.br) | Território e equipamentos municipais |
-| OpenStreetMap | [openstreetmap.org](https://www.openstreetmap.org) | Geolocalização das ONGs/pontos (lat/lng) |
+| OpenStreetMap | [openstreetmap.org](https://www.openstreetmap.org) | Geolocalização das ONGs e rotas — **consumido de verdade** |
 
-Endpoint: `GET /api/sources`. **Dados operacionais do protótipo são fictícios** (criados para demonstração e identificados como tal na API e na tela), conforme permitido pelo edital.
+Endpoints: `GET /api/sources` (lista as fontes com a base do kit destacada) e `GET /api/geocode?q=<endereço>`.
+
+**Como o OpenStreetMap é usado de verdade:** o backend consulta o **Nominatim** (serviço oficial de geocodificação do OpenStreetMap, `nominatim.openstreetmap.org/search`) para transformar o endereço de cada ONG em coordenadas reais. A resposta inclui `lat`, `lng`, `displayName` e `osmUrl` (link direto para o ponto no openstreetmap.org). Os resultados ficam em cache em memória e há *fallback* para as coordenadas de demonstração se a rede estiver indisponível — nesse caso a API informa `source: "fallback-coordenadas-demonstracao"`, sem nunca inventar que consultou o mapa. Todo o painel de ONGs traz os botões **Google Maps** (rota) e **OpenStreetMap** (ponto).
+
+**Dados operacionais do protótipo são fictícios** (criados para demonstração e identificados como tal na API e na tela), conforme permitido pelo edital.
 
 ## 6. Indicador de resultado
 
 **Indicador:** *Cobertura de itens urgentes com estoque disponível* — percentual de itens do inventário com estoque disponível > 0.
 **Meta do protótipo:** manter **≥ 80%** durante a operação.
-**Onde ver:** `GET /api/indicator` (tempo real, a partir de estoque + doações). No pitch, a equipe apresenta este indicador e sua evolução após cada doação cadastrada.
+**Onde ver:** `GET /api/indicator` e o **cartão "Cobertura de Itens Urgentes" no dashboard**, que mostra exatamente o mesmo número (nenhuma métrica decorativa na tela — os antigos valores fixos "94,2%" e "+42 doações" foram removidos justamente para o indicador ser auditável). No pitch, a equipe cadastra uma doação e mostra o indicador mudando em tempo real.
 
 ## 7. Validação com o usuário de verdade (Movimento Pró-Criança)
 
@@ -113,9 +117,12 @@ Deploy em **serviço único no Render** (frontend + backend na mesma origem, sem
 
 ## 11. Acessibilidade e mobile (regra 6)
 
-- Layout responsivo (celular primeiro), navegação por abas com `role="tablist/tab"` e `aria-selected`
-- Link *Pular para o conteúdo*, `lang="pt-BR"`, labels associados a todos os campos (`htmlFor`/`id`)
-- Contraste alto (azul-marinho/branco), foco visível, linguagem simples em todas as telas
+- Layout responsivo (celular primeiro), navegação por abas com `role="tablist/tab"`, `aria-selected` e setas do teclado
+- Link *Pular para o conteúdo*, `lang="pt-BR"`, `meta description`, labels associados a todos os campos (`htmlFor`/`id`)
+- Contraste reforçado: textos de apoio em `slate-600` sobre branco (≥ 4,5:1, WCAG AA); verde/ciano usados só com variante escura para texto
+- Tabelas com `<caption>` (oculto só visualmente) e `scope="col"` nos cabeçalhos, para leitores de tela
+- Feedback dinâmico com `role="status"` + `aria-live="polite"` (cadastro de doação e resultado da IA são anunciados)
+- Foco visível em todos os controles, linguagem simples e frases curtas em todas as telas
 
 ## 12. Estrutura do repositório
 
@@ -138,14 +145,27 @@ Deploy em **serviço único no Render** (frontend + backend na mesma origem, sem
 └── README.md              # este arquivo (modelo do edital)
 ```
 
-## 13. Checklist do code freeze (16h do Dia 2)
+## 13. Conformidade regra a regra (Anexo V)
+
+| # | Regra do edital | Como a solução cumpre | Onde comprovar |
+|---|---|---|---|
+| 1 | Foco em quem mais sofre, útil para todos | Famílias em áreas de risco da RMR atendidas por 4 ONGs; qualquer cidadão pode doar | Aba *ONGs* e texto da home |
+| 2 | Um caminho, um fluxo completo | Caminho 3 — Mobilizar e recuperar: necessidade → oferta → IA → estoque → entrega → indicador | Seção 2 e abas do app |
+| 3 | IA essencial, com decisão humana | `POST /api/ai/optimize` (score 0–10 com pesos, escassez e fatores) + `humanDecision` obrigatório | Seção 4, teste "IA ordenada e auditável" |
+| 4 | Usar ao menos uma base do kit | OpenStreetMap via Nominatim (geocodificação real) + Apac/Cemaden/Dados Recife como contexto declarado | Seção 5, `GET /api/geocode`, `osmUrl` em `/api/data` |
+| 5 | Validar com jovem do Movimento Pró-Criança | Roteiro de teste e registro de falas/ajustes | Seção 7 e [docs/VALIDACAO.md](docs/VALIDACAO.md) |
+| 6 | Acessível de verdade | Skip link, tablist por teclado, contraste AA, `<caption>`/`scope`, `aria-live`, mobile first | Seção 11 |
+| 7 | Deploy público + ≥3 testes no CI + README | Serviço único no Render, 10 testes no GitHub Actions, este README | Seção 10, badge/CI, `npm test` |
+| 8 | Escopo aprovado pelo mentor no Dia 1 | Escopo do Caminho 3 registrado e reduzido a um fluxo | Seção 2 |
+
+## 14. Checklist do code freeze (16h do Dia 2)
 
 - [ ] Solução funcionando no celular, com deploy público
-- [ ] Repositório com README preenchido (este arquivo)
-- [ ] Pelo menos 3 testes passando no CI
+- [ ] Repositório com README preenchido nos campos do modelo (seções 1 a 7)
+- [ ] Pelo menos 3 testes passando no CI (hoje: 10)
 - [ ] Pitch de 3 minutos com demonstração (roteiro em [docs/PITCH.md](docs/PITCH.md))
 
-## 14. Stack
+## 15. Stack
 
 React + Vite + Tailwind CSS (front) • Node.js + Express (back) • Sem banco de dados no protótipo (memória, dados fictícios identificados) • Deploy: Render • CI: GitHub Actions
 
