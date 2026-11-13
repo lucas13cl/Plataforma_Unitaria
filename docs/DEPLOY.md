@@ -6,23 +6,53 @@ Objetivo do edital: **deploy público** + **primeiro deploy até o fim do Dia 1*
 
 Vantagens: uma só URL, sem CORS, sem `localhost` no código, `render.yaml` já pronto.
 
-### Passo a passo (5 minutos)
+### Deploy com Blueprint (recomendado — 1 clique)
 
-1. Crie uma conta em [render.com](https://render.com) (pode entrar com GitHub).
-2. No painel, clique em **New → Web Service**.
-3. Escolha **Build and Deploy from a Blueprint** e selecione o repositório `lucas13cl/Plataforma_Unitaria`.
-   - O Render lê o `render.yaml` da raiz e preenche: build, start e health check (`/api/health`).
-4. Clique em **Create Web Service** e aguarde o primeiro deploy (2–4 min).
-5. Copie a URL pública gerada (ex.: `https://plataforma-unitaria-recife.onrender.com`) e cole no README (seção *Deploy público*) e no pitch.
-6. Teste: abra a URL no celular, cadastre uma doação de teste e rode a otimização com IA.
+O `render.yaml` já descreve build, start, health check e variáveis. Não é preciso digitar comando no painel.
 
-> Plano gratuito do Render "cai" (sleep) após inatividade e demora ~30–50s para acordar na primeira visita. Avise a banca ou deixe uma aba aberta antes do pitch.
+1. Abra **<https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria>** e entre com GitHub.
+2. Se aparecer, autorize o **Render GitHub App** no repositório `Plataforma_Unitaria` (permissão de leitura + webhooks).
+3. O Render lê o `render.yaml` da raiz e mostra o serviço `plataforma-unitaria-recife` já configurado (Node, plano free, região Ohio, health check `/api/health`).
+4. Clique em **Apply** / **Create Web Service**. O primeiro build leva 2–4 min.
+5. Espere o status **Live** (o health check precisa responder 200).
+6. Copie a URL pública e cole no README (seção 10) e no pitch.
+
+> ⚠️ **Formato do `render.yaml`:** o Render exige a chave raiz `services:`. Um YAML com `name:` no topo (formato antigo) falha com *"Invalid Blueprint"*. Este repositório já está no formato correto.
+
+### Se preferir criar o serviço à mão
+
+| Campo do painel | Valor |
+|---|---|
+| Type | Web Service |
+| Language / Runtime | Node |
+| Branch | `main` |
+| Region | Ohio |
+| Build Command | `npm ci && npm --prefix frontend ci && npm --prefix frontend run build` |
+| Start Command | `node backend/server.js` |
+| Health Check Path | `/api/health` |
+| Instance Type | Free |
+| Env | `NODE_ENV=production` · `NODE_VERSION=22.22.3` |
+
+`PORT` **não** deve ser definida: o Render injeta automaticamente e o backend já lê `process.env.PORT`.
+
+### Problemas comuns
+
+| Sintoma | Causa provável | Correção |
+|---|---|---|
+| *Invalid Blueprint* | YAML fora do formato `services:` | usar o `render.yaml` deste repositório |
+| Build falha em `npm ci` | lockfile ausente/desatualizado | commit do `package-lock.json` (raiz e `frontend/`) |
+| Página branca em `/` | `frontend/dist` não gerado | conferir o Build Command; o CI tem o job `smoke-producao` fazendo o mesmo caminho |
+| `Cannot find module 'express'` | build e start em pastas diferentes | rodar `npm ci` na raiz (não dentro de `frontend`) |
+| 404 em `/api/...` | serviço subiu como *Static Site* | recriar como **Web Service** |
+| Demora ~50 s na 1ª visita | hibernação do plano free | abrir a URL antes do pitch e deixar carregada |
 
 ### Como funciona em produção
 
 - `npm --prefix frontend run build` gera `frontend/dist`.
 - `node backend/server.js` serve a API **e** o `dist` na mesma porta (`PORT` do Render).
-- O frontend chama `/api/...` relativo — nenhuma URL hardcoded.
+- O frontend chama `/api/...` relativo — nenhuma URL hardcoded (`grep -r localhost frontend/dist` deve voltar vazio).
+- `/api/health` é o health check: se não responder 200, o Render marca o deploy como falho.
+- O job `smoke-producao` do CI roda exatamente esses comandos a cada push.
 
 ## Alternativa: Vercel (front) + Render (back)
 

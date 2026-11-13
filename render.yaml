@@ -1,13 +1,22 @@
-# Deploy em serviço único no Render (sugestão do edital: Render ou Vercel).
-# Frontend + backend na mesma origem: sem CORS, sem URL hardcoded.
-# Como usar: ver docs/DEPLOY.md (Blueprint: New Web Service -> Build and Deploy from a Blueprint).
-name: plataforma-unitaria-recife
-runtime: node
-buildCommand: npm ci && npm --prefix frontend ci && npm --prefix frontend run build
-startCommand: node backend/server.js
-healthCheckPath: /api/health
-envVars:
-  - key: NODE_ENV
-    value: production
-  - key: PORT
-    sync: false
+# Blueprint do Render — serviço único (frontend + backend na mesma origem).
+# Formato oficial de Blueprint: a chave raiz PRECISA ser "services:".
+# Deploy: https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria
+# Passo a passo com telas: docs/DEPLOY.md
+services:
+  - type: web
+    name: plataforma-unitaria-recife
+    runtime: node
+    plan: free
+    region: ohio
+    branch: main
+    autoDeploy: true
+    # Instala as dependências do back e do front e gera o build do React.
+    buildCommand: npm ci && npm --prefix frontend ci && npm --prefix frontend run build
+    # O backend serve frontend/dist na mesma origem (sem CORS, sem URL hardcoded).
+    startCommand: node backend/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.22.3

@@ -111,9 +111,44 @@ npm test           # backend/tests/api.test.js — 7 testes (health, dados, font
 npm run build:frontend   # gera frontend/dist — o backend passa a servir o app na mesma origem
 ```
 
-## 10. Deploy
+## 10. Deploy público
 
-Deploy em **serviço único no Render** (frontend + backend na mesma origem, sem CORS e sem URL hardcoded). Passo a passo completo em [docs/DEPLOY.md](docs/DEPLOY.md). Blueprint pronto em `render.yaml`. Alternativa: frontend na Vercel + backend no Render (definir `VITE_API_URL`).
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria)
+
+**URL pública:** `https://plataforma-unitaria-recife.onrender.com` *(preencher aqui assim que o Blueprint terminar o primeiro build — passo 4 de [docs/DEPLOY.md](docs/DEPLOY.md))*
+
+Serviço **único** no Render: o mesmo processo serve a API (`/api/...`) e o app React buildado, na mesma origem — sem CORS, sem URL hardcoded, abre no celular sem instalar nada. Blueprint versionado em [`render.yaml`](render.yaml):
+
+| Item | Valor |
+|---|---|
+| Runtime / plano | Node 22 · plano free |
+| Build | `npm ci && npm --prefix frontend ci && npm --prefix frontend run build` |
+| Start | `node backend/server.js` |
+| Health check | `/api/health` |
+| Região | Ohio (mais próxima com datacenter do Render) |
+
+### Deploy em 4 passos (um clique + autorização)
+
+1. Abra **<https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria>** (ou o botão acima) e entre com GitHub.
+2. Autorize o Render a ver este repositório e clique em **Apply** — ele lê o `render.yaml`, então não há nada para configurar à mão.
+3. Aguarde o build (2–4 min) até o health check ficar **Live**.
+4. Copie a URL `https://<serviço>.onrender.com`, abra no celular, cadastre uma doação e cole a URL nas seções 6 e 7 deste README e no pitch.
+
+> **Plano gratuito:** o serviço hiberna após ~15 min sem uso e leva 30–50 s para acordar. Antes do pitch, abra a URL uma vez e deixe a aba carregada.
+
+### Verificação pós-deploy (rode na URL pública)
+
+```bash
+BASE=https://plataforma-unitaria-recife.onrender.com
+curl -s $BASE/api/health      # {"status":"Online",...}
+curl -s $BASE/api/indicator   # coveragePercent
+curl -s $BASE/api/sources     # fontes do kit + usedSources
+curl -s "$BASE/api/geocode?q=Ibura"   # OpenStreetMap / fallback identificado
+```
+
+O CI tem o job **`smoke-producao`**, que executa exatamente os comandos do Render (build + start) e valida `/api/health`, `/api/indicator`, `/api/sources` e a entrega do app em `/`. Se o deploy quebrar, o mesmo comando já falhou no CI antes.
+
+Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY.md#alternativa-vercel-front--render-back).
 
 ## 11. Acessibilidade e mobile (regra 6)
 
