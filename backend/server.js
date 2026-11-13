@@ -295,6 +295,18 @@ app.use(compression());
 app.disable('x-powered-by');
 app.set('trust proxy', 1); // Render fica atrás de proxy: IP/protocolo corretos
 
+// Deck do pitch (HTML interativo) — público em /pitch/ no mesmo domínio do app.
+// Assim a apresentação tem URL estável (Render) e não depende de abrir arquivo local.
+const pitchDir = path.join(__dirname, '..', 'pitch');
+if (fs.existsSync(pitchDir)) {
+  app.use('/pitch', express.static(pitchDir, {
+    extensions: ['html'],
+    setHeaders: (res, filePath) => {
+      res.setHeader('Cache-Control', filePath.endsWith('.html') ? 'no-cache' : 'public, max-age=3600');
+    },
+  }));
+}
+
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist, {

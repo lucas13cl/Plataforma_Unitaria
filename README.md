@@ -15,6 +15,7 @@
 | Indicador de resultado | <https://plataforma-unitaria.onrender.com/api/indicator> |
 | Fontes do kit | <https://plataforma-unitaria.onrender.com/api/sources> |
 | Geocodificação (OpenStreetMap) | <https://plataforma-unitaria.onrender.com/api/geocode?q=Ibura> |
+| **Pitch (deck de 3 min)** | **<https://plataforma-unitaria.onrender.com/pitch/>** |
 
 > ⏱️ **Plano gratuito do Render:** após ~15 min sem acesso o serviço hiberna e a primeira visita leva 30–50 s para acordar. Antes do pitch, abra a URL e deixe a aba carregada.
 > 🔁 **Deploy contínuo:** cada merge na `main` é publicado automaticamente. O CI (`test-and-build` + `smoke-producao`) precisa passar antes do merge.
@@ -168,6 +169,10 @@ Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY
 ## 11. Pitch — apresentação de 3 minutos
 
 Deck **HTML interativo**, arquivo único e offline-first: **[`pitch/index.html`](pitch/index.html)**.
+
+> ### ▶ Apresentação online: <https://plataforma-unitaria.onrender.com/pitch/>
+> Mesmo domínio do app, sem instalar nada. Também abre offline pelo arquivo local `pitch/index.html`.
+
 
 - **13 slides** com navegação por teclado, cronômetro de 3:00 (verde → amarelo → vermelho), tela cheia e modo **PDF** pelo `Ctrl/Cmd + P`
 - **Demo ao vivo** em moldura de celular (`iframe` do app publicado) com botão para abrir em nova aba e plano B por captura
