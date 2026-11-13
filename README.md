@@ -3,8 +3,21 @@
 > **Hackathon Antena na Lama — APONTI Academy: Devs Criam com IA**
 > Solução com IA para ajudar a população da Região Metropolitana do Recife (RMR) a se preparar, se proteger e se recuperar de eventos climáticos extremos (chuvas fortes, alagamentos, deslizamentos de barreiras e calor intenso), cuidando de rios, mangues e encostas — começando por quem mais sofre, de modo útil para todos.
 
-**Deploy público:** _preencher com a URL após o deploy (ver [docs/DEPLOY.md](docs/DEPLOY.md))_ — ex.: `https://plataforma-unitaria-recife.onrender.com`
-**CI:** testes automatizados + build a cada push/PR (`.github/workflows/ci.yml`)
+## 🔗 Acesse a aplicação
+
+> ### ▶ [plataforma-unitaria.onrender.com](https://plataforma-unitaria.onrender.com/)
+> Clique e abra no celular — sem instalar nada. A mesma URL serve a interface e a API.
+
+| O que | Link direto |
+|---|---|
+| Aplicação (celular e desktop) | **<https://plataforma-unitaria.onrender.com/>** |
+| Status da API | <https://plataforma-unitaria.onrender.com/api/health> |
+| Indicador de resultado | <https://plataforma-unitaria.onrender.com/api/indicator> |
+| Fontes do kit | <https://plataforma-unitaria.onrender.com/api/sources> |
+| Geocodificação (OpenStreetMap) | <https://plataforma-unitaria.onrender.com/api/geocode?q=Ibura> |
+
+> ⏱️ **Plano gratuito do Render:** após ~15 min sem acesso o serviço hiberna e a primeira visita leva 30–50 s para acordar. Antes do pitch, abra a URL e deixe a aba carregada.
+> 🔁 **Deploy contínuo:** cada merge na `main` é publicado automaticamente. O CI (`test-and-build` + `smoke-producao`) precisa passar antes do merge.
 
 ---
 
@@ -115,7 +128,8 @@ npm run build:frontend   # gera frontend/dist — o backend passa a servir o app
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria)
 
-**URL pública:** `https://plataforma-unitaria-recife.onrender.com` *(preencher aqui assim que o Blueprint terminar o primeiro build — passo 4 de [docs/DEPLOY.md](docs/DEPLOY.md))*
+**URL pública:** **<https://plataforma-unitaria.onrender.com/>**
+Serviço `plataforma-unitaria-recife` · blueprint `plataforma-unitaria` · branch `main` · runtime Node 22 · plano free · health check `/api/health`.
 
 Serviço **único** no Render: o mesmo processo serve a API (`/api/...`) e o app React buildado, na mesma origem — sem CORS, sem URL hardcoded, abre no celular sem instalar nada. Blueprint versionado em [`render.yaml`](render.yaml):
 
@@ -133,14 +147,14 @@ Serviço **único** no Render: o mesmo processo serve a API (`/api/...`) e o app
 1. Abra **<https://render.com/deploy?repo=https://github.com/lucas13cl/Plataforma_Unitaria>** (ou o botão acima) e entre com GitHub.
 2. Autorize o Render a ver este repositório e clique em **Apply** — ele lê o `render.yaml`, então não há nada para configurar à mão.
 3. Aguarde o build (2–4 min) até o health check ficar **Live**.
-4. Copie a URL `https://<serviço>.onrender.com`, abra no celular, cadastre uma doação e cole a URL nas seções 6 e 7 deste README e no pitch.
+4. A URL gerada é **<https://plataforma-unitaria.onrender.com/>** — já registrada nesta seção e no topo do README. Abra no celular, cadastre uma doação e confira o indicador.
 
 > **Plano gratuito:** o serviço hiberna após ~15 min sem uso e leva 30–50 s para acordar. Antes do pitch, abra a URL uma vez e deixe a aba carregada.
 
 ### Verificação pós-deploy (rode na URL pública)
 
 ```bash
-BASE=https://plataforma-unitaria-recife.onrender.com
+BASE=https://plataforma-unitaria.onrender.com
 curl -s $BASE/api/health      # {"status":"Online",...}
 curl -s $BASE/api/indicator   # coveragePercent
 curl -s $BASE/api/sources     # fontes do kit + usedSources
@@ -196,7 +210,7 @@ Alternativa (front na Vercel + back no Render): ver [docs/DEPLOY.md](docs/DEPLOY
 
 ## 14. Checklist do code freeze (16h do Dia 2)
 
-- [ ] Solução funcionando no celular, com deploy público
+- [x] Solução funcionando no celular, com deploy público — <https://plataforma-unitaria.onrender.com/>
 - [ ] Repositório com README preenchido nos campos do modelo (seções 1 a 7)
 - [ ] Pelo menos 3 testes passando no CI (hoje: 10)
 - [ ] Pitch de 3 minutos com demonstração (roteiro em [docs/PITCH.md](docs/PITCH.md))
