@@ -1,18 +1,30 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// CORS: em produção, CORS_ORIGIN pode ser a URL pública do deploy (separadas por vírgula)
+const corsOrigins = (process.env.CORS_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
+app.use(cors(corsOrigins.length ? { origin: corsOrigins } : {}));
 app.use(express.json());
 
-// In-Memory Database para demonstração ágil na apresentação
+/**
+ * Banco em memória para demonstração no hackathon.
+ * ATENÇÃO (edital, item "O que a organização prepara", nº 3):
+ * os dados abaixo são FICTÍCIOS / de exemplo, criados para o protótipo,
+ * e estão identificados como tal. Em produção, substituir por integração
+ * com as fontes do kit (Apac, Cemaden, Dados Abertos da Prefeitura do
+ * Recife, OpenStreetMap) — ver GET /api/sources e docs/DADOS.md.
+ */
 let db = {
+  dataNotice: 'Dados fictícios de demonstração (protótipo de hackathon). Não representam registros reais.',
   donations: [
-    { id: 1, donor: 'Supermercado Bompreço', item: 'Cestas Básicas', quantity: 150, ngo: 'ONG Esperança Passarinho', date: '2026-06-06', status: 'Confirmado' },
-    { id: 2, donor: 'Loja Confiança Móveis', item: 'Colchões Solteiro', quantity: 40, ngo: 'Associação Dois Carneiros Unidos', date: '2026-06-05', status: 'Entregue' },
-    { id: 3, donor: 'Empório Recife Solidário', item: 'Água Mineral (fardos 20L)', quantity: 200, ngo: 'Centro Comunitário Ibura', date: '2026-06-06', status: 'Em trânsito' }
+    { id: 1, donor: 'Supermercado Bompreço (fictício)', item: 'Cestas Básicas', quantity: 150, ngo: 'ONG Esperança Passarinho', date: '2026-06-06', status: 'Confirmado' },
+    { id: 2, donor: 'Loja Confiança Móveis (fictício)', item: 'Colchões Solteiro', quantity: 40, ngo: 'Associação Dois Carneiros Unidos', date: '2026-06-05', status: 'Entregue' },
+    { id: 3, donor: 'Empório Recife Solidário (fictício)', item: 'Água Mineral (fardos 20L)', quantity: 200, ngo: 'Centro Comunitário Ibura', date: '2026-06-06', status: 'Em trânsito' }
   ],
   ngos: [
     { id: 1, name: 'ONG Esperança Passarinho', address: 'Av. Principal de Passarinho, 420 - Recife/PE', contact: '(81) 98877-6655', needs: 'Água, Colchões, Alimentos não perecíveis', lat: -7.9850, lng: -34.9120 },
@@ -27,77 +39,205 @@ let db = {
   ]
 };
 
+// Fontes do kit de dados oferecido pela organização (edital, regra 4)
+const DATA_SOURCES = [
+  { name: 'Apac — Agência Pernambucana de Águas e Clima', url: 'https://apac.pe.gov.br', use: 'Monitoramento de chuva, nível de rios e previsão climática em Pernambuco.' },
+  { name: 'Cemaden — Centro Nacional de Monitoramento e Alertas de Desastres Naturais', url: 'https://www.cemaden.gov.br', use: 'Alertas de deslizamento, inundação e chuva intensa.' },
+  { name: 'Dados Abertos da Prefeitura do Recife', url: 'https://dados.recife.pe.gov.br', use: 'Bases municipais de território, equipamentos e vulnerabilidade.' },
+  { name: 'OpenStreetMap', url: 'https://www.openstreetmap.org', use: 'Geolocalização de ONGs, pontos de coleta e rotas (lat/lng das bases).' }
+];
+
+// Palavras-chave de necessidade -> peso de urgência (base do score de IA)
+const NEED_WEIGHTS = [
+  { keywords: ['água', 'agua'], weight: 2.0, label: 'água/hidratação' },
+  { keywords: ['colch'], weight: 1.5, label: 'colchões/dormitório' },
+  { keywords: ['cesta', 'alimento', 'comida'], weight: 1.5, label: 'alimentos' },
+  { keywords: ['fralda'], weight: 1.0, label: 'fraldas (bebês)' },
+  { keywords: ['higiene', 'limpeza', 'desinfec'], weight: 1.0, label: 'higiene/limpeza' },
+  { keywords: ['roupa', 'agasalho'], weight: 0.5, label: 'roupas' },
+  { keywords: ['telha', 'cola'], weight: 0.5, label: 'reparo de moradia' }
+];
+
+function normalize(text) {
+  return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function inventoryMatchesNeed(inventoryItem, needsText) {
+  const item = normalize(inventoryItem);
+  const needs = normalize(needsText);
+  // Correspondência simples e auditável: substring nos dois sentidos
+  return item.split(' ').some((word) => word.length > 3 && needs.includes(word)) || needs.split(' ').some((word) => word.length > 3 && item.includes(word));
+}
+
+/**
+ * Algoritmo de priorização (IA com propósito — edital, regra 3).
+ * Determinístico e explicável: qualquer pessoa pode auditar o cálculo.
+ * score(0–10) = soma(pesos das necessidades citadas pela ONG)
+ *             + bônus de escassez (estoque disponível baixo)
+ *             − alívio se já há doação a caminho para aquela ONG
+ * A recomendação NÃO decide sozinha: a decisão final é humana.
+ */
+function computeAllocations(database) {
+  const allocations = database.ngos.map((ngo) => {
+    const needsNorm = normalize(ngo.needs);
+    let score = 0;
+    const factors = [];
+
+    for (const { keywords, weight, label } of NEED_WEIGHTS) {
+      if (keywords.some((k) => needsNorm.includes(normalize(k)))) {
+        score += weight;
+        factors.push(`necessidade de ${label} (+${weight})`);
+      }
+    }
+
+    const matchedInventory = database.inventory.filter((inv) => inventoryMatchesNeed(inv.item, ngo.needs));
+    for (const inv of matchedInventory) {
+      const ratio = inv.total > 0 ? inv.available / inv.total : 0;
+      if (ratio < 0.4) {
+        score += 1.5;
+        factors.push(`escassez de ${inv.item}: só ${Math.round(ratio * 100)}% disponível (+1.5)`);
+      } else if (ratio < 0.6) {
+        score += 0.8;
+        factors.push(`estoque moderado de ${inv.item}: ${Math.round(ratio * 100)}% disponível (+0.8)`);
+      }
+    }
+
+    const incoming = database.donations.filter((d) => d.ngo === ngo.name && d.status === 'Em trânsito').length;
+    if (incoming > 0) {
+      score -= 0.5;
+      factors.push(`já há ${incoming} doação(ões) a caminho (−0.5)`);
+    }
+
+    score = Math.max(0, Math.min(10, Math.round(score * 10) / 10));
+
+    const suggestedItems = matchedInventory
+      .filter((inv) => inv.available > 0)
+      .map((inv) => {
+        const recommendedUnits = Math.max(10, Math.min(inv.available, Math.ceil(inv.available * (score / 10) * 0.5)));
+        return {
+          item: inv.item,
+          recommendedUnits,
+          justification: `ONG cita "${ngo.needs}". Estoque disponível: ${inv.available} de ${inv.total} (${Math.round((inv.available / inv.total) * 100)}%).`
+        };
+      });
+
+    return {
+      ngo: ngo.name,
+      urgencyScore: score,
+      urgencyLabel: score >= 8 ? 'Crítica' : score >= 6 ? 'Alta' : score >= 4 ? 'Moderada' : 'Baixa',
+      factors,
+      suggestedItems
+    };
+  });
+
+  // Maior urgência primeiro
+  allocations.sort((a, b) => b.urgencyScore - a.urgencyScore);
+  return allocations;
+}
+
+function computeIndicator(database) {
+  const totalItems = database.inventory.length;
+  const itemsWithStock = database.inventory.filter((i) => i.available > 0).length;
+  const totalDonations = database.donations.length;
+  const delivered = database.donations.filter((d) => d.status === 'Entregue').length;
+  const coverage = totalItems ? Math.round((itemsWithStock / totalItems) * 100) : 0;
+  return {
+    name: 'Cobertura de itens urgentes com estoque disponível',
+    description: 'Percentual de itens do inventário com estoque disponível > 0. Meta do protótipo: manter ≥ 80% durante a operação.',
+    coveragePercent: coverage,
+    itemsWithStock,
+    totalItems,
+    donationsTotal: totalDonations,
+    donationsDelivered: delivered,
+    note: 'Indicador calculado em tempo real a partir do estoque e das doações cadastradas (dados fictícios de demonstração).'
+  };
+}
+
 // Rotas da API
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Online', timestamp: new Date() });
+  res.json({ status: 'Online', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/data', (req, res) => {
   res.json(db);
 });
 
+app.get('/api/sources', (req, res) => {
+  res.json({ sources: DATA_SOURCES, note: 'Fontes do kit de dados da organização (edital, regra 4). Dados operacionais do protótipo são fictícios e identificados como tal.' });
+});
+
+app.get('/api/indicator', (req, res) => {
+  res.json(computeIndicator(db));
+});
+
 app.post('/api/donations', (req, res) => {
+  const { donor, item, quantity, ngo } = req.body || {};
+  const errors = [];
+  if (!donor || typeof donor !== 'string' || !donor.trim()) errors.push('donor (nome do doador) é obrigatório.');
+  if (!item || typeof item !== 'string' || !item.trim()) errors.push('item é obrigatório.');
+  const qty = Number(quantity);
+  if (!quantity || Number.isNaN(qty) || qty <= 0) errors.push('quantity deve ser um número maior que zero.');
+  if (!ngo || !db.ngos.some((n) => n.name === ngo)) errors.push('ngo deve ser uma ONG cadastrada.');
+
+  if (errors.length) {
+    return res.status(400).json({ message: 'Dados inválidos.', errors });
+  }
+
   const newDonation = {
     id: db.donations.length + 1,
-    ...req.body,
+    donor: donor.trim(),
+    item: item.trim(),
+    quantity: qty,
+    ngo,
     date: new Date().toISOString().split('T')[0],
     status: 'Confirmado'
   };
   db.donations.push(newDonation);
-  
+
   // Atualiza estoque global simplificado
-  const existingInv = db.inventory.find(i => i.item.toLowerCase().includes(newDonation.item.toLowerCase()));
+  const existingInv = db.inventory.find((i) => normalize(i.item).includes(normalize(newDonation.item)) || normalize(newDonation.item).includes(normalize(i.item)));
   if (existingInv) {
-    existingInv.total += Number(newDonation.quantity);
-    existingInv.available += Number(newDonation.quantity);
+    existingInv.total += qty;
+    existingInv.available += qty;
   } else {
     db.inventory.push({
       item: newDonation.item,
-      total: Number(newDonation.quantity),
+      total: qty,
       distributed: 0,
-      available: Number(newDonation.quantity)
+      available: qty
     });
   }
 
   res.status(201).json({ message: 'Doação cadastrada com sucesso!', donation: newDonation });
 });
 
-// Endpoint de Inteligência Artificial para Otimização de Distribuição
 app.post('/api/ai/optimize', (req, res) => {
-  // Simulação de algoritmo de IA baseado em carência e prioridade regional
-  const aiRecommendation = {
-    analysisTimestamp: new Date(),
-    summary: 'Análise concluída com base na criticidade de Passarinho e Dois Carneiros.',
-    allocations: [
-      {
-        ngo: 'ONG Esperança Passarinho',
-        urgencyScore: '9.4 / 10 (Alta densidade de desabrigados)',
-        suggestedItems: [
-          { item: 'Água Mineral (20L)', recommendedUnits: 120, justification: 'Risco de contaminação e alta demanda por hidratação.' },
-          { item: 'Colchões Solteiro', recommendedUnits: 25, justification: 'Perda total de dormitórios na encosta principal.' }
-        ]
-      },
-      {
-        ngo: 'Associação Dois Carneiros Unidos',
-        urgencyScore: '8.8 / 10 (Área de difícil acesso por lama)',
-        suggestedItems: [
-          { item: 'Cestas Básicas', recommendedUnits: 90, justification: 'Estoque de alimentos perecíveis esgotado após interrupção de vias.' },
-          { item: 'Kits de Higiene', recommendedUnits: 60, justification: 'Prevenção contra doenças de veiculação hídrica.' }
-        ]
-      },
-      {
-        ngo: 'Centro Comunitário Ibura',
-        urgencyScore: '7.5 / 10',
-        suggestedItems: [
-          { item: 'Cestas Básicas', recommendedUnits: 50, justification: 'Suporte complementar a famílias periféricas.' }
-        ]
-      }
-    ]
-  };
-
-  res.json(aiRecommendation);
+  const allocations = computeAllocations(db);
+  res.json({
+    analysisTimestamp: new Date().toISOString(),
+    summary: 'Análise de priorização concluída a partir das necessidades cadastradas pelas ONGs, do estoque disponível e das doações a caminho.',
+    allocations,
+    audit: {
+      method: 'Score de urgência (0–10) = pesos das necessidades citadas + bônus de escassez do estoque − alívio por doação a caminho. Cálculo determinístico e auditável.',
+      inputsUsed: ['ngos.needs', 'inventory.available/total', 'donations.status'],
+      humanDecision: 'Recomendação automática para apoio à decisão. A decisão final de distribuição é humana (ONG, Defesa Civil e lideranças comunitárias).'
+    }
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT} - Plataforma Humanitária Recife`);
-});
+// Em produção (deploy em serviço único), serve o frontend buildado
+const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get(/^(?!\/api\/).*/, (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT} - Plataforma Humanitária Recife`);
+  });
+}
+
+module.exports = { app, computeAllocations, computeIndicator, DATA_SOURCES };

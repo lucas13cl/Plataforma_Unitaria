@@ -1,0 +1,13 @@
+# Deploy em serviço único no Render (sugestão do edital: Render ou Vercel).
+# Frontend + backend na mesma origem: sem CORS, sem URL hardcoded.
+# Como usar: ver docs/DEPLOY.md (Blueprint: New Web Service -> Build and Deploy from a Blueprint).
+name: plataforma-unitaria-recife
+runtime: node
+buildCommand: npm ci && npm --prefix frontend ci && npm --prefix frontend run build
+startCommand: node backend/server.js
+healthCheckPath: /api/health
+envVars:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    sync: false

@@ -15,6 +15,10 @@ import {
   Users
 } from 'lucide-react';
 
+// Em deploy de serviço único (Render), a API fica na mesma origem (/api).
+// Em deploy separado, defina VITE_API_URL com a URL pública do backend.
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [data, setData] = useState({ donations: [], ngos: [], inventory: [] });
@@ -34,7 +38,7 @@ export default function App() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/data');
+      const res = await fetch(`${API_BASE}/api/data`);
       const json = await res.json();
       setData(json);
     } catch (e) {
@@ -65,7 +69,7 @@ export default function App() {
     const newDonation = { donor: donorName, item: itemType, quantity: Number(quantity), ngo: selectedNgo };
     
     try {
-      await fetch('http://localhost:5000/api/donations', {
+      await fetch(`${API_BASE}/api/donations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newDonation)
@@ -84,7 +88,7 @@ export default function App() {
   const runAiOptimization = async () => {
     setLoadingAi(true);
     try {
-      const res = await fetch('http://localhost:5000/api/ai/optimize', { method: 'POST' });
+      const res = await fetch(`${API_BASE}/api/ai/optimize`, { method: 'POST' });
       const json = await res.json();
       setAiResult(json);
     } catch (err) {
@@ -94,7 +98,7 @@ export default function App() {
         allocations: [
           {
             ngo: 'ONG Esperança Passarinho',
-            urgencyScore: '9.4 / 10 (Crítico - Encosta)',
+            urgencyScore: 9.4, urgencyLabel: 'Crítica', factors: ['necessidade de água/hidratação (+2)', 'escassez de estoque (+1.5)'],
             suggestedItems: [
               { item: 'Água Mineral (20L)', recommendedUnits: 120, justification: 'Necessidade urgente de hidratação e consumo.' },
               { item: 'Colchões Solteiro', recommendedUnits: 25, justification: 'Perda de dormitórios.' }
@@ -102,7 +106,7 @@ export default function App() {
           },
           {
             ngo: 'Associação Dois Carneiros Unidos',
-            urgencyScore: '8.8 / 10 (Área isolada)',
+            urgencyScore: 8.8, urgencyLabel: 'Crítica', factors: ['necessidade de alimentos (+1.5)', 'estoque moderado (+0.8)'],
             suggestedItems: [
               { item: 'Cestas Básicas', recommendedUnits: 90, justification: 'Esgotamento de mantimentos básicos.' }
             ]
@@ -115,6 +119,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800">
+      <a href="#conteudo" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-blue-900 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg">Pular para o conteúdo</a>
       {/* Top Header */}
       <header className="bg-blue-900 text-white shadow-md border-b border-blue-800">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -139,8 +144,8 @@ export default function App() {
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 flex space-x-1 sm:space-x-4 overflow-x-auto">
+      <nav aria-label="Seções da plataforma" className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20">
+        <div role="tablist" aria-label="Navegação principal" className="max-w-7xl mx-auto px-4 flex space-x-1 sm:space-x-4 overflow-x-auto">
           {[
             { id: 'dashboard', label: 'Visão Geral', icon: Activity },
             { id: 'donors', label: 'Doadores & Ofertas', icon: PlusCircle },
@@ -154,6 +159,8 @@ export default function App() {
             return (
               <button
                 key={tab.id}
+                role="tab"
+                aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 py-4 px-3 border-b-2 font-medium text-sm transition-all whitespace-nowrap ${
                   isActive
@@ -170,7 +177,7 @@ export default function App() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+      <main id="conteudo" className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
         
         {/* TAB 1: DASHBOARD */}
         {activeTab === 'dashboard' && (
@@ -343,9 +350,9 @@ export default function App() {
 
               <form onSubmit={handleDonationSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Seu Nome ou Empresa</label>
+                  <label htmlFor="donorName" className="block text-xs font-semibold text-slate-700 uppercase mb-1">Seu Nome ou Empresa</label>
                   <input 
-                    type="text" 
+                    id="donorName" type="text" 
                     required
                     value={donorName}
                     onChange={(e) => setDonorName(e.target.value)}
@@ -355,9 +362,9 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Tipo de Item</label>
+                  <label htmlFor="itemType" className="block text-xs font-semibold text-slate-700 uppercase mb-1">Tipo de Item</label>
                   <select 
-                    value={itemType}
+                    id="itemType" value={itemType}
                     onChange={(e) => setItemType(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
                   >
@@ -371,9 +378,9 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Quantidade</label>
+                  <label htmlFor="quantity" className="block text-xs font-semibold text-slate-700 uppercase mb-1">Quantidade</label>
                   <input 
-                    type="number" 
+                    id="quantity" type="number" 
                     min="1"
                     required
                     value={quantity}
@@ -384,9 +391,9 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">ONG / Ponto de Destino</label>
+                  <label htmlFor="selectedNgo" className="block text-xs font-semibold text-slate-700 uppercase mb-1">ONG / Ponto de Destino</label>
                   <select 
-                    value={selectedNgo}
+                    id="selectedNgo" value={selectedNgo}
                     onChange={(e) => setSelectedNgo(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
                   >
@@ -567,7 +574,7 @@ export default function App() {
                       <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
                         <h5 className="font-bold text-slate-900 text-base">{alloc.ngo}</h5>
                         <span className="bg-red-100 text-red-800 text-xs font-bold px-2.5 py-1 rounded-lg">
-                          Prioridade: {alloc.urgencyScore}
+                          Prioridade: {alloc.urgencyScore} / 10 ({alloc.urgencyLabel || '—'})
                         </span>
                       </div>
 
@@ -634,7 +641,7 @@ export default function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-          Plataforma de Assistência Humanitária Recife • Desenvolvido para Apresentação & Impacto Social
+          Plataforma de Assistência Humanitária Recife • Hackathon Antena na Lama — APONTI Academy • Dados do protótipo fictícios • Fontes do kit: Apac (apac.pe.gov.br) • Cemaden (cemaden.gov.br) • Dados Abertos Prefeitura do Recife • OpenStreetMap
         </div>
       </footer>
     </div>

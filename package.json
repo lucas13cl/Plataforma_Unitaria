@@ -1,13 +1,14 @@
 {
   "name": "plataforma-humanitaria-recife",
   "version": "1.0.0",
-  "description": "Plataforma de Assistência Humanitária para Regiões Afetadas (Recife)",
+  "description": "Plataforma de Assistência Humanitária para Regiões Afetadas (Recife) — Hackathon Antena na Lama / APONTI Academy",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
     "dev:backend": "nodemon backend/server.js",
     "dev:frontend": "cd frontend && npm run dev",
-    "build:frontend": "cd frontend && npm run build"
+    "build:frontend": "cd frontend && npm run build",
+    "test": "node --test backend/tests/api.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,5 +16,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
