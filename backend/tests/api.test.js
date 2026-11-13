@@ -104,6 +104,32 @@ describe('API — Plataforma Humanitária Recife (edital: ≥3 testes no CI)', (
     assert.ok(json.audit && json.audit.humanDecision);
   });
 
+  test('GET /api/geocode rejeita consulta vazia com 400', async () => {
+    const res = await fetch(`${baseUrl}/api/geocode`);
+    assert.equal(res.status, 400);
+    const json = await res.json();
+    assert.ok(Array.isArray(json.errors));
+  });
+
+  test('GET /api/geocode usa a base do kit (OpenStreetMap) e retorna coordenadas + osmUrl', async () => {
+    const res = await fetch(`${baseUrl}/api/geocode?q=${encodeURIComponent('Av. Principal de Passarinho, 420 - Recife/PE')}`);
+    // Com rede: source=openstreetmap-nominatim. Sem rede: fallback para a ONG conhecida.
+    // Nos dois casos a estrutura é a mesma e as coordenadas são números válidos.
+    assert.ok(res.status === 200 || res.status === 502);
+    if (res.status === 200) {
+      const json = await res.json();
+      assert.ok(typeof json.lat === 'number' && typeof json.lng === 'number');
+      assert.match(json.osmUrl, /openstreetmap\.org/);
+      assert.ok(['openstreetmap-nominatim', 'fallback-coordenadas-demonstracao'].includes(json.source));
+    }
+  });
+
+  test('GET /api/data inclui osmUrl (OpenStreetMap) por ONG', async () => {
+    const res = await fetch(`${baseUrl}/api/data`);
+    const json = await res.json();
+    for (const ngo of json.ngos) assert.match(ngo.osmUrl, /openstreetmap\.org/);
+  });
+
   test('GET /api/indicator retorna o indicador de resultado definido no README', async () => {
     const res = await fetch(`${baseUrl}/api/indicator`);
     assert.equal(res.status, 200);

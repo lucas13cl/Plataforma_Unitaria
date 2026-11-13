@@ -41,10 +41,11 @@ let db = {
 
 // Fontes do kit de dados oferecido pela organização (edital, regra 4)
 const DATA_SOURCES = [
-  { name: 'Apac — Agência Pernambucana de Águas e Clima', url: 'https://apac.pe.gov.br', use: 'Monitoramento de chuva, nível de rios e previsão climática em Pernambuco.' },
-  { name: 'Cemaden — Centro Nacional de Monitoramento e Alertas de Desastres Naturais', url: 'https://www.cemaden.gov.br', use: 'Alertas de deslizamento, inundação e chuva intensa.' },
-  { name: 'Dados Abertos da Prefeitura do Recife', url: 'https://dados.recife.pe.gov.br', use: 'Bases municipais de território, equipamentos e vulnerabilidade.' },
-  { name: 'OpenStreetMap', url: 'https://www.openstreetmap.org', use: 'Geolocalização de ONGs, pontos de coleta e rotas (lat/lng das bases).' }
+  { name: 'Apac — Agência Pernambucana de Águas e Clima', url: 'https://apac.pe.gov.br', use: 'Monitoramento de chuva, nível de rios e previsão climática em Pernambuco.', used: false },
+  { name: 'Cemaden — Centro Nacional de Monitoramento e Alertas de Desastres Naturais', url: 'https://www.cemaden.gov.br', use: 'Alertas de deslizamento, inundação e chuva intensa.', used: false },
+  { name: 'Dados Abertos da Prefeitura do Recife', url: 'https://dados.recife.pe.gov.br', use: 'Bases municipais de território, equipamentos e vulnerabilidade.', used: false },
+  { name: 'OpenStreetMap', url: 'https://www.openstreetmap.org', use: 'Geolocalização consumida de verdade via Nominatim (GET /api/geocode) e links de rota por ONG (osmUrl).', used: true,
+    endpoints: ['GET /api/geocode?q=<endereço>', 'GET /api/data (campo osmUrl por ONG)'] }
 ];
 
 // Palavras-chave de necessidade -> peso de urgência (base do score de IA)
@@ -57,6 +58,15 @@ const NEED_WEIGHTS = [
   { keywords: ['roupa', 'agasalho'], weight: 0.5, label: 'roupas' },
   { keywords: ['telha', 'cola'], weight: 0.5, label: 'reparo de moradia' }
 ];
+
+function osmUrlFor(lat, lng) {
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
+}
+
+// Enriquece as ONGs com link de rota no OpenStreetMap (base do kit)
+function ngosWithOsm(database) {
+  return database.ngos.map((ngo) => ({ ...ngo, osmUrl: osmUrlFor(ngo.lat, ngo.lng) }));
+}
 
 function normalize(text) {
   return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -159,11 +169,64 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/data', (req, res) => {
-  res.json(db);
+  res.json({ ...db, ngos: ngosWithOsm(db) });
 });
 
 app.get('/api/sources', (req, res) => {
-  res.json({ sources: DATA_SOURCES, note: 'Fontes do kit de dados da organização (edital, regra 4). Dados operacionais do protótipo são fictícios e identificados como tal.' });
+  res.json({ sources: DATA_SOURCES, usedSources: DATA_SOURCES.filter((s) => s.used).map((s) => s.name), note: 'Fontes do kit de dados da organização (edital, regra 4). Dados operacionais do protótipo são fictícios e identificados como tal.' });
+});
+
+// Geocodificação usando a base do kit: OpenStreetMap (Nominatim).
+// Uso: GET /api/geocode?q=Av.%20Principal%20de%20Passarinho%2C%20420%20-%20Recife
+// Se o serviço externo estiver indisponível, usa as coordenadas de demonstração
+// da ONG correspondente (identificadas como fallback) — nunca quebra a demo.
+const geocodeCache = new Map();
+app.get('/api/geocode', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) {
+    return res.status(400).json({ message: 'Parâmetro q (endereço) é obrigatório.', errors: ['q é obrigatório.'] });
+  }
+  if (geocodeCache.has(q)) return res.json(geocodeCache.get(q));
+
+  // Fallback só quando o endereço/ONG consultado existe na base do protótipo.
+  const qn = normalize(q);
+  const qtokens = qn.split(/[^a-z0-9]+/).filter((w) => w.length >= 4);
+  const fallbackNgo = db.ngos.find((ngo) => {
+    const name = normalize(ngo.name);
+    const addr = normalize(ngo.address);
+    return (
+      (qn.length >= 5 && (addr.includes(qn) || name.includes(qn))) ||
+      (name.length >= 5 && qn.includes(name)) ||
+      qtokens.some((w) => addr.includes(w) || name.includes(w))
+    );
+  });
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const osmRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+      { headers: { 'User-Agent': 'PlataformaUnitaria-Recife/1.0 (hackathon Antena na Lama)' }, signal: controller.signal }
+    );
+    clearTimeout(timeout);
+    if (!osmRes.ok) throw new Error(`Nominatim respondeu ${osmRes.status}`);
+    const results = await osmRes.json();
+    if (Array.isArray(results) && results.length > 0) {
+      const lat = Number(results[0].lat);
+      const lng = Number(results[0].lon);
+      const payload = { query: q, lat, lng, displayName: results[0].display_name, osmUrl: osmUrlFor(lat, lng), source: 'openstreetmap-nominatim' };
+      geocodeCache.set(q, payload);
+      return res.json(payload);
+    }
+    throw new Error('Nenhum resultado no OpenStreetMap');
+  } catch (err) {
+    if (fallbackNgo) {
+      const payload = { query: q, lat: fallbackNgo.lat, lng: fallbackNgo.lng, displayName: fallbackNgo.address, osmUrl: osmUrlFor(fallbackNgo.lat, fallbackNgo.lng), source: 'fallback-coordenadas-demonstracao' };
+      geocodeCache.set(q, payload);
+      return res.json(payload);
+    }
+    return res.status(502).json({ message: 'Não foi possível geocodificar o endereço agora. Tente novamente.', errors: [String(err.message || err)] });
+  }
 });
 
 app.get('/api/indicator', (req, res) => {

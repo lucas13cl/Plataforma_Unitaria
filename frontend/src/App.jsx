@@ -22,6 +22,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [data, setData] = useState({ donations: [], ngos: [], inventory: [] });
+  const [indicator, setIndicator] = useState(null);
   const [aiResult, setAiResult] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
   
@@ -41,6 +42,10 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/data`);
       const json = await res.json();
       setData(json);
+      try {
+        const indRes = await fetch(`${API_BASE}/api/indicator`);
+        setIndicator(await indRes.json());
+      } catch (e) { /* indicador indisponível offline: painel usa contagem local */ }
     } catch (e) {
       console.log('Backend offline, usando dados mockados locais para demonstração visual.');
       setData({
@@ -168,7 +173,7 @@ export default function App() {
                     : 'border-transparent text-slate-600 hover:text-blue-600 hover:border-slate-300'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
                 {tab.label}
               </button>
             );
@@ -208,9 +213,9 @@ export default function App() {
               <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Doações Registradas</p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1">{data.donations.length + 42}</h3>
-                  <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> +12 hoje
+                  <h3 className="text-2xl font-bold text-slate-800 mt-1">{data.donations.length}</h3>
+                  <span className="text-xs text-emerald-700 font-medium flex items-center gap-1 mt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {data.donations.filter((d) => d.status === 'Entregue').length} já entregues
                   </span>
                 </div>
                 <div className="bg-blue-50 p-3 rounded-xl text-blue-600">
@@ -246,10 +251,10 @@ export default function App() {
 
               <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Eficiência Logística</p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1">94.2%</h3>
-                  <span className="text-xs text-cyan-600 font-medium flex items-center gap-1 mt-1">
-                    <Cpu className="w-3.5 h-3.5" /> Otimizado por IA
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Cobertura de Itens Urgentes</p>
+                  <h3 className="text-2xl font-bold text-slate-800 mt-1">{indicator ? `${indicator.coveragePercent}%` : '—'}</h3>
+                  <span className="text-xs text-cyan-700 font-medium flex items-center gap-1 mt-1">
+                    <Cpu className="w-3.5 h-3.5" /> Indicador do projeto (meta ≥ 80%)
                   </span>
                 </div>
                 <div className="bg-cyan-50 p-3 rounded-xl text-cyan-600">
@@ -267,13 +272,14 @@ export default function App() {
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
+                    <caption className="sr-only">Últimas doações cadastradas na plataforma</caption>
                     <thead>
-                      <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase">
-                        <th className="py-3 px-3">Doador</th>
-                        <th className="py-3 px-3">Item</th>
-                        <th className="py-3 px-3">Qtd</th>
-                        <th className="py-3 px-3">ONG Destino</th>
-                        <th className="py-3 px-3">Status</th>
+                      <tr className="border-b border-slate-200 text-xs text-slate-600 uppercase">
+                        <th scope="col" className="py-3 px-3">Doador</th>
+                        <th scope="col" className="py-3 px-3">Item</th>
+                        <th scope="col" className="py-3 px-3">Qtd</th>
+                        <th scope="col" className="py-3 px-3">ONG Destino</th>
+                        <th scope="col" className="py-3 px-3">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -304,7 +310,7 @@ export default function App() {
                     <AlertTriangle className="w-5 h-5 text-amber-500" />
                     <span>Demandas Mais Urgentes</span>
                   </h3>
-                  <p className="text-xs text-slate-500 mb-4">Itens com maior escassez nas bases de Passarinho e Dois Carneiros:</p>
+                  <p className="text-xs text-slate-600 mb-4">Itens com maior escassez nas bases de Passarinho e Dois Carneiros:</p>
                   
                   <div className="space-y-3">
                     {[
@@ -339,10 +345,10 @@ export default function App() {
                 <PlusCircle className="w-5 h-5 text-blue-600" />
                 <span>Cadastrar Nova Doação</span>
               </h3>
-              <p className="text-xs text-slate-500 mb-5">Preencha os dados do item e selecione a ONG de entrega.</p>
+              <p className="text-xs text-slate-600 mb-5">Preencha os dados do item e selecione a ONG de entrega.</p>
 
               {formSuccess && (
-                <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-xl text-sm flex items-center gap-2 animate-bounce">
+                <div role="status" aria-live="polite" className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-xl text-sm flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                   <span>Doação cadastrada e estoque atualizado com sucesso!</span>
                 </div>
@@ -413,25 +419,26 @@ export default function App() {
               <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico de Ofertas Cadastradas</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
+                  <caption className="sr-only">Histórico de ofertas de doação cadastradas</caption>
                   <thead>
-                    <tr className="border-b border-slate-200 text-xs text-slate-500 uppercase">
-                      <th className="py-3 px-3">ID</th>
-                      <th className="py-3 px-3">Doador</th>
-                      <th className="py-3 px-3">Item</th>
-                      <th className="py-3 px-3">Quantidade</th>
-                      <th className="py-3 px-3">Destino</th>
-                      <th className="py-3 px-3">Data</th>
+                    <tr className="border-b border-slate-200 text-xs text-slate-600 uppercase">
+                      <th scope="col" className="py-3 px-3">ID</th>
+                      <th scope="col" className="py-3 px-3">Doador</th>
+                      <th scope="col" className="py-3 px-3">Item</th>
+                      <th scope="col" className="py-3 px-3">Quantidade</th>
+                      <th scope="col" className="py-3 px-3">Destino</th>
+                      <th scope="col" className="py-3 px-3">Data</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm">
                     {data.donations.map((d, i) => (
                       <tr key={i} className="hover:bg-slate-50">
-                        <td className="py-3 px-3 text-slate-400">#{d.id || i+1}</td>
+                        <td className="py-3 px-3 text-slate-500">#{d.id || i+1}</td>
                         <td className="py-3 px-3 font-medium text-slate-900">{d.donor}</td>
                         <td className="py-3 px-3 text-slate-700">{d.item}</td>
                         <td className="py-3 px-3 font-semibold text-blue-600">{d.quantity} un</td>
                         <td className="py-3 px-3 text-slate-600">{d.ngo}</td>
-                        <td className="py-3 px-3 text-slate-500 text-xs">{d.date || 'Hoje'}</td>
+                        <td className="py-3 px-3 text-slate-600 text-xs">{d.date || 'Hoje'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -447,7 +454,7 @@ export default function App() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-800">Estoque Centralizado & Inventário Global</h3>
-                <p className="text-xs text-slate-500 mt-1">Consolidado em tempo real de todas as ONGs parceiras em Passarinho, Dois Carneiros e Ibura.</p>
+                <p className="text-xs text-slate-600 mt-1">Consolidado em tempo real de todas as ONGs parceiras em Passarinho, Dois Carneiros e Ibura.</p>
               </div>
               <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-xs font-semibold border border-blue-200">
                 Total de SKUs Monitorados: {data.inventory.length}
@@ -483,7 +490,7 @@ export default function App() {
                       style={{ width: `${Math.min(100, (inv.distributed / inv.total) * 100)}%` }}
                     ></div>
                   </div>
-                  <div className="text-right text-[10px] text-slate-500">Taxa de distribuição: {Math.round((inv.distributed / inv.total) * 100)}%</div>
+                  <div className="text-right text-[11px] text-slate-600">Taxa de distribuição: {Math.round((inv.distributed / inv.total) * 100)}%</div>
                 </div>
               ))}
             </div>
@@ -498,7 +505,7 @@ export default function App() {
                 <MapIcon className="w-5 h-5 text-blue-600" />
                 <span>Pontos de Arrecadação & ONGs Próximas (Recife e Região)</span>
               </h3>
-              <p className="text-xs text-slate-500 mb-6">Encontre a base de recebimento mais próxima para entregar sua doação presencialmente.</p>
+              <p className="text-xs text-slate-600 mb-6">Encontre a base de recebimento mais próxima para entregar sua doação presencialmente.</p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {data.ngos.map((ngo, idx) => (
@@ -522,14 +529,24 @@ export default function App() {
                       </div>
                     </div>
 
-                    <a 
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ngo.name + ' ' + ngo.address)}`}
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-xl text-center text-xs transition shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      <MapPin className="w-3.5 h-3.5" /> Ver Rota no Google Maps
-                    </a>
+                    <div className="flex gap-2">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ngo.name + ' ' + ngo.address)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-xl text-center text-xs transition shadow-sm flex items-center justify-center gap-1.5"
+                      >
+                        <MapPin className="w-3.5 h-3.5" /> Google Maps
+                      </a>
+                      <a
+                        href={ngo.osmUrl || `https://www.openstreetmap.org/?mlat=${ngo.lat}&mlon=${ngo.lng}#map=16/${ngo.lat}/${ngo.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-medium py-2 rounded-xl text-center text-xs transition shadow-sm flex items-center justify-center gap-1.5"
+                      >
+                        <MapPin className="w-3.5 h-3.5" /> OpenStreetMap
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -559,11 +576,11 @@ export default function App() {
             </div>
 
             {aiResult && (
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6 animate-fadeIn">
+              <div role="status" aria-live="polite" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div>
                     <h4 className="text-lg font-bold text-slate-800">Resultado da Alocação Otimizada por IA</h4>
-                    <p className="text-xs text-slate-500">Gerado em: {new Date(aiResult.analysisTimestamp).toLocaleString()}</p>
+                    <p className="text-xs text-slate-600">Gerado em: {new Date(aiResult.analysisTimestamp).toLocaleString()}</p>
                   </div>
                   <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">Recomendação Concluída</span>
                 </div>
@@ -605,7 +622,7 @@ export default function App() {
                 <Truck className="w-5 h-5 text-blue-600" />
                 <span>Próximos Passos & Roadmap de Expansão</span>
               </h3>
-              <p className="text-xs text-slate-500">Planejamento estratégico para evolução da plataforma em futuras operações humanitárias.</p>
+              <p className="text-xs text-slate-600">Planejamento estratégico para evolução da plataforma em futuras operações humanitárias.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
@@ -640,7 +657,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-600">
           Plataforma de Assistência Humanitária Recife • Hackathon Antena na Lama — APONTI Academy • Dados do protótipo fictícios • Fontes do kit: Apac (apac.pe.gov.br) • Cemaden (cemaden.gov.br) • Dados Abertos Prefeitura do Recife • OpenStreetMap
         </div>
       </footer>
