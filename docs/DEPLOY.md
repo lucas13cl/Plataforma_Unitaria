@@ -2,6 +2,8 @@
 
 Objetivo do edital: **deploy público** + **primeiro deploy até o fim do Dia 1**.
 
+**Em produção:** <https://plataforma-unitaria.onrender.com/> — serviço único `plataforma-unitaria-recife` (Node 22, plano free, região Ohio), deploy contínuo a cada merge na `main`.
+
 ## Opção recomendada: serviço único no Render (frontend + backend)
 
 Vantagens: uma só URL, sem CORS, sem `localhost` no código, `render.yaml` já pronto.
@@ -25,7 +27,7 @@ O `render.yaml` já descreve build, start, health check e variáveis. Não é pr
 
 4. Clique em **Deploy Blueprint**. O primeiro build leva 2–4 min.
 5. Espere o status **Live** (o health check precisa responder 200).
-6. Copie a URL pública e cole no README (seção 10) e no pitch.
+6. A URL pública é **<https://plataforma-unitaria.onrender.com/>** — já registrada no topo do README, na seção 10 e no `docs/PITCH.md`. Se o Render gerar outro domínio (ex.: com sufixo `-6n6q`), basta atualizar esses três lugares.
 
 > ⚠️ **Formato do `render.yaml`:** o Render exige a chave raiz `services:`. Um YAML com `name:` no topo (formato antigo) falha com *"Invalid Blueprint"*. Este repositório já está no formato correto.
 
