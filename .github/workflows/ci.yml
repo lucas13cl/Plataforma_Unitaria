@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
@@ -38,3 +38,39 @@ jobs:
       - name: Build do frontend
         working-directory: frontend
         run: npm run build
+
+  # Prova que os comandos EXATOS do Render funcionam: build do front + boot do
+  # servidor único servindo a API e o app na mesma porta (health check verde).
+  smoke-producao:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Build (mesmo comando do render.yaml)
+        run: npm ci && npm --prefix frontend ci && npm --prefix frontend run build
+
+      - name: Subir servidor de produção e testar endpoints
+        env:
+          PORT: '10000'
+          NODE_ENV: production
+        run: |
+          node backend/server.js &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:10000/api/health > /dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:10000/api/health | grep -q Online
+          curl -fsS http://127.0.0.1:10000/api/indicator | grep -q coveragePercent
+          curl -fsS http://127.0.0.1:10000/api/sources | grep -q openstreetmap
+          curl -fsS http://127.0.0.1:10000/ | grep -qi '<div id="root">'
+          echo "Smoke de produção OK"

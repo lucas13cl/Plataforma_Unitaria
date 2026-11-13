@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const fs = require('fs');
 const path = require('path');
 
@@ -288,18 +289,32 @@ app.post('/api/ai/optimize', (req, res) => {
   });
 });
 
-// Em produção (deploy em serviço único), serve o frontend buildado
+// Em produção (deploy em serviço único), serve o frontend buildado.
+// compression: o bundle sai ~56 kB gzip em vez de ~183 kB (importante em 3G/4G na favela).
+app.use(compression());
+app.disable('x-powered-by');
+app.set('trust proxy', 1); // Render fica atrás de proxy: IP/protocolo corretos
+
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 if (fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+  app.use(express.static(frontendDist, {
+    // Arquivos com hash no nome podem ficar em cache por 1 ano; o index nunca.
+    setHeaders: (res, filePath) => {
+      if (/[\\/]assets[\\/]/.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  }));
   app.get(/^(?!\/api\/).*/, (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT} - Plataforma Humanitária Recife`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor rodando em 0.0.0.0:${PORT} - Plataforma Humanitária Recife`);
   });
 }
 
