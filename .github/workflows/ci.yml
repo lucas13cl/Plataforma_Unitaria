@@ -1,0 +1,40 @@
+# CI — Hackathon Antena na Lama (APONTI Academy)
+# Edital, regra 7: pelo menos 3 testes automatizados passando no CI.
+# Este workflow roda os testes do backend e o build do frontend a cada push/PR.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Instalar dependências do backend
+        run: npm ci
+
+      - name: Rodar testes automatizados (backend)
+        run: npm test
+
+      - name: Instalar dependências do frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build do frontend
+        working-directory: frontend
+        run: npm run build
