@@ -1,3 +1,4 @@
+import NgoModal from './components/NgoModal';
 import React, { useState, useEffect } from 'react';
 import { 
   HeartHandshake, 
@@ -21,6 +22,7 @@ export default function App() {
   const [data, setData] = useState({ donations: [], ngos: [], inventory: [] });
   const [aiResult, setAiResult] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Form states
   const [donorName, setDonorName] = useState('');
@@ -134,6 +136,15 @@ export default function App() {
               <span>Abrangência: 6 Municípios da RMR</span>
             </div>
           </div>
+          {/* Botão para cadastrar nova ONG */}
+          <div>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-xl transition shadow-sm text-sm flex items-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" /> Cadastrar Nova ONG
+            </button>
+          </div>
         </div>
       </header>
 
@@ -164,6 +175,7 @@ export default function App() {
                 {tab.label}
               </button>
             );
+            
           })}
         </div>
       </nav>
@@ -636,6 +648,13 @@ export default function App() {
           Recife Solidário • Cobertura Completa da Região Metropolitana (RMR)
         </div>
       </footer>
+      {/* Modal de Cadastro de Novas ONGs / Locais na RMR */}
+      <NgoModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onNgoAdded={fetchData} 
+      />
     </div>
   );
 }
+  
