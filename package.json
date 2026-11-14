@@ -8,15 +8,18 @@
     "dev:backend": "nodemon backend/server.js",
     "dev:frontend": "cd frontend && npm run dev",
     "build:frontend": "cd frontend && npm run build",
-    "test": "node --test backend/tests/api.test.js"
+    "test": "node --test backend/tests/api.test.js",
+    "postinstall": "prisma skills sync || exit 0"
   },
   "dependencies": {
+    "@prisma/client": "^7.10.1",
     "compression": "^1.8.2",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "prisma": "^8.0.0-rc.33"
   },
   "engines": {
     "node": ">=20 <24"
